@@ -37,9 +37,10 @@ loop:
 .section .exceptions, "ax"
 interrupt_handler:
     # PL
-    addi sp, sp, -8
-    stw r8, 0(sp)
-    stw r9, 4(sp)
+    addi sp, sp, -12
+    stw ra, 0(sp)
+    stw r8, 4(sp)
+    stw r9, 8(sp)
 
     # which device caused the interrupt?
     rdctl et, ctl4                      # read out iPending
@@ -53,11 +54,11 @@ interrupt_handler:
     ldwio r8, 0(r8)                     # Data now in r8
 
 
-    # Check if data vaild
-    andi et, r8, 0b1000000000000000
+    # Check if data valid
+    andi et, r8, 0x8000
     beq et, r0, exit_interrupt_handler
 
-    # If vaild, mask it and save it to reg
+    # If valid, mask it and save it to reg
     andi r9, r8, 0b11111111             # Real Data now in r9
 
     # If Key release detect, clear the LED
@@ -70,13 +71,33 @@ key_release_loop:
     movia r8, PS2_DATA_1
     ldwio r8, 0(r8)                     # Data now in r8
 
-    # Check if data vaild
-    andi et, r8, 0b1000000000000000
+    # Check if data valid
+    andi et, r8, 0x8000
     beq et, r0, key_release_loop
 
-    # Clear LED
+    # Data is valid; mask out everything other than the data
+    andi r8, r8, 0xFF
+
     movia et, ADDR_REDLEDS
-    stwio r0, 0(et)
+    # Check if the key released was the W key (code: 1D)
+    movi r9, 0x1D
+    bne r8, r9, check_s_up
+    call stop_back_motor
+    br exit_interrupt_handler
+check_s_up: # S (code: 1B)
+    movi r9, 0x1B
+    bne r8, r9, check_a_up
+    call stop_back_motor
+    br exit_interrupt_handler
+check_a_up: # A (code: 1C)
+    movi r9, 0x1C
+    stwio r9, 0(et)
+    bne r8, r9, check_d_up
+    call stop_front_motor
+check_d_up: # D (code: 23)
+    movi r9, 0x23
+    bne r8, r9, exit_interrupt_handler
+    call stop_front_motor
     br exit_interrupt_handler
 
 Key_press_down:
@@ -89,9 +110,35 @@ Key_press_down:
 
 exit_interrupt_handler:
     # EPL
-    ldw r9, 4(sp)
-    ldw r8, 0(sp)
-    addi sp, sp, 8
+    ldw r9, 8(sp)
+    ldw r8, 4(sp)
+    ldw ra, 0(sp)
+    addi sp, sp, 12
 
     subi ea, ea, 4
     eret
+
+# Stubs for movement handlers
+stop_back_motor:
+    subi sp, sp, 4
+    stw r16, 0(sp)
+
+    movia et, ADDR_REDLEDS
+    movi r16, 0xF
+    stwio r16, 0(et)
+
+    ldw r16, 0(sp)
+    addi sp, sp, 4
+    ret
+
+stop_front_motor:
+    subi sp, sp, 4
+    stw r16, 0(sp)
+
+    movia et, ADDR_REDLEDS
+    movi r16, 0xF0
+    stwio r16, 0(et)
+
+    ldw r16, 0(sp)
+    addi sp, sp, 4
+    ret
