@@ -77,7 +77,7 @@ key_release:
     andi r9, r8, 0b11111111             # Real Data now in r9
 
     # Here just clear LED, do nothing with data in r9 in this test case.
-	movia et, ADDR_REDLEDS
+    movia et, ADDR_REDLEDS
     stwio r0, 0(et)
 
     # Exit
