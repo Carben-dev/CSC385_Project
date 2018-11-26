@@ -8,7 +8,7 @@
  * This routine checks which KEY has been pressed and updates the global
  * variables as required.
  ******************************************************************************/
-.global     PUSHBUTTON_ISR                  
+.global     stop_back_motor, stop_front_motor, go_backward, go_forward, turn_right, turn_left
 PUSHBUTTON_ISR:                                 
         subi    sp, sp, 28                      # reserve space on the stack
         stw     ra, 0(sp)                       
@@ -79,5 +79,99 @@ END_PUSHBUTTON_ISR:
         ldw     r15, 24(sp)                     
         addi    sp, sp, 28                      
 
+stop_back_motor:
+        subi sp, sp, 4
+        stw  r8, 0(sp)
+
+        # For reference: set the LEDs
+        movia et, LED_BASE
+        movi r8, 0xF
+        stwio r8, 0(et)
+
+        # Stop the back motor
+        movia et, JP2_BASE
+        ldwio r8, 0(et)
+        ori   r8, r8, 0b11
+        stwio r8, 0(et)
+
+        ldw r8, 0(sp)
+        addi sp, sp, 4
+        ret
+
+stop_front_motor:
+        subi    sp, sp, 4
+        stw     r8, 0(sp)
+
+        # For reference: set the LEDs
+        #movia   et, LED_BASE
+        #movi    r8, 0xF0
+        #stwio   r8, 0(et)
+
+        # Stop the front motor
+        movia et, JP2_BASE
+        ldwio r8, 0(et)
+        ori   r8, r8, 0b1100
+        stwio r8, 0(et)
+
+        ldw     r8, 0(sp)
+        addi    sp, sp, 4
+        ret
+
+go_forward:
+        subi    sp, sp, 8
+        stw     r8, 0(sp)
+        stw     r9, 4(sp)
+
+        #movia   et, LED_BASE
+        #movi    r8, 1
+        #stwio   r8, 0(et)
+
+        movia   et, JP2_BASE
+        ldwio   r8, 0(et)
+        movia   r9, 0xfffffffc
+        and     r8, r8, r9
+        stwio   r8, 0(et)
+
+        ldw     r8, 0(sp)
+        ldw     r9, 4(sp)
+        addi    sp, sp, 8
+        ret
+
+go_backward:
+        subi sp, sp, 4
+        stw  r16, 0(sp)
+        
+        #movia et, JP2_BASE
+        movia   et, LED_BASE
+        movi    r16, 2
+        stwio   r16, 0(et)
+
+        ldw  r16, 0(sp)
+        addi sp, sp, 4
+        ret
+
+turn_right:
+        subi sp, sp, 4
+        stw  r16, 0(sp)
+
+        movia   et, LED_BASE
+        movi    r16, 4
+        stwio   r16, 0(et)
+
+        ldw  r16, 0(sp)
+        addi sp, sp, 4
+        ret
+
+turn_left:
+        subi sp, sp, 4
+        stw  r16, 0(sp)
+        
+        movia   et, LED_BASE
+        movi    r16, 8
+        stwio   r16, 0(et)
+
+        ldw  r16, 0(sp)
+        addi sp, sp, 4
+        ret
 
 .end                                        
