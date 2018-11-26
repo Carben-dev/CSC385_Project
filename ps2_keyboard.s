@@ -17,16 +17,16 @@ _start:
     # Setup PS2 control interrupt
     # Setup the first bit of PS2 CTL to 1 to enable PS2 Read interrupt,
     # PS2 Controller will trigger interrupt on data received.
-    movi r8, 0b1
+    movi  r8, 0b1
     stwio r8, 0(r17)
 
     # Enable IRQ 7 for PS2 controller 1
     # PS2 controller 1 use IRQ 7 to request interrupt.
-    movi r8, 0b10000000
+    movi  r8, 0b10000000
     wrctl ienable, r8
 
     # Enable interrupt on CPU
-    movi r8, 0b1
+    movi  r8, 0b1
     wrctl status, r8
 
     # Loop wait for interrupt
@@ -44,10 +44,20 @@ interrupt_handler:
 
     # which device caused the interrupt?
     rdctl et, ctl4                      # read out iPending
-    andi et, et, 0b10000000             # Mask reading
-    beq et, r0, exit_interrupt_handler  # If not cause by PS2, exit
+    andi  et, et, 0b10000000             # Mask reading
+    beq   et, r0, exit_interrupt_handler  # If not cause by PS2, exit
 
 
+    addi sp, sp, -8
+    stw r8, 0(sp)
+    stw r9, 4(sp)
+
+    # which device caused the interrupt?
+    rdctl et, ctl4                      # read out iPending
+    andi  et, et, 0b10000000             # Mask reading
+    beq   et, r0, exit_interrupt_handler  # If not cause by PS2, exit
+
+read_data:
     # handle interrupt
     # read out the whole data reg for the PS2 Controller
     movia r8, PS2_DATA_1
