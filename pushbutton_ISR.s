@@ -1,7 +1,7 @@
-.include    "address_map_nios2.s"           
-.include    "globals.s"                     
+.include    "address_map_nios2.s"
+.include    "globals.s"
 .extern     PATTERN                         # externally defined variables
-.extern     SHIFT_DIR                       
+.extern     SHIFT_DIR
 /*******************************************************************************
  * Pushbutton - Interrupt Service Routine
  *
