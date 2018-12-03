@@ -29,34 +29,51 @@ EXCEPTION_HANDLER:
         subi    ea, ea, 4               # must decrement ea by one instruction
                                         # for external interrupts, so that the
                                         # interrupted instruction will be run
-
 SKIP_EA_DEC:
         stw     ea, 4(sp)               # save all used registers on the Stack
         stw     ra, 8(sp)               # needed if call inst is used
         stw     r8, 12(sp)
         stw     r9, 16(sp)
 
+        # Check if interrupt caused by timer
         rdctl   et, ctl4
-        bne     et, r0, CHECK_KEYBOARD   # interrupt is an external interrupt
+        movi    r8, 0b1
+        andi    r9, et, 0b1
+        beq     r8, r9, TIMER_HANDLER
+
+        # Check if interrupt caused by keyboard
+        movi    r8, 0b10000000
+        andi    r9, et, 0b10000000
+        beq     r8, r9, CHECK_KEYBOARD   # interrupt is an external interrupt
 
 NOT_EI:                                 # exception must be unimplemented
                                         # instruction or TRAP instruction. This
                                         # code does not handle those cases
         br      END_ISR
 
+TIMER_HANDLER:
+        # Once here, timeout, stop the front motor
+        call stop_front_motor
+
+        # Clear timeout bit
+        movia   et, TIMER_BASE
+        sthio   r0, 0(et)
+
+        br      END_ISR
+
 CHECK_KEYBOARD:
-        andi    r8, et, 0x80            # Check if Keyboard cause interrupt
+        andi    r8, et, 0x80
         beq     r8, r0, END_ISR
 
-CHECK_VALIDATION:
+
         # Check that the keyboard data is valid
         movia   r8, PS2_BASE
         ldwio   r8, 0(r8)
 
         andi    et, r8, 0x8000
-        beq     et, r0, CHECK_VALIDATION # If data not valid, keep pulling
+        beq     et, r0, END_ISR
 
-        andi    r9, r8, 0xFF          # Keyboard input now in r9
+        andi    r9, r8, 0xFF          # Keyboard input now in r23
 
         # Is the key pressed or released?
         movi et, 0xF0
@@ -68,7 +85,7 @@ KEY_RELEASE:
         ldwio r8, 0(r8)
 
         andi et, r8, 0x8000
-        beq et, r0, KEY_RELEASE       # If data not valid, keep pulling
+        beq et, r0, KEY_RELEASE
 
         # Data is valid; mask out everything other than the data
         andi r8, r8, 0xFF
@@ -91,12 +108,14 @@ check_a_up: # A (code: 1C)
         #stwio r9, 0(et)
         bne r8, r9, check_d_up
         call stop_front_motor
+        call clear_is_turning
         br END_ISR
 
 check_d_up: # D (code: 23)
         movi r9, 0x23
         bne r8, r9, END_ISR
         call stop_front_motor
+        call clear_is_turning
         br END_ISR
 
 KEY_PRESS_DOWN: # The data from the keyboard is in r9
