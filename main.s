@@ -1,5 +1,4 @@
 .include    "address_map_nios2.s"
-.include    "globals.s"
 
 /*******************************************************************************
  * This program demonstrates use of interrupts. It
